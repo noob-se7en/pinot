@@ -67,7 +67,7 @@ public class FixedBitMVForwardIndexWriter implements Closeable {
   private int _prevRowStartIndex = 0;
   private int _prevRowLength = 0;
   private int _chunkOffsetHeaderSize;
-  private int _bitsetSize;
+  private long _bitsetSize;
   private long _rawDataSize;
   private long _totalSize;
   private int _docsPerChunk;
@@ -91,7 +91,7 @@ public class FixedBitMVForwardIndexWriter implements Closeable {
         PinotDataBuffer.mapFile(file, false, 0, _totalSize, ByteOrder.BIG_ENDIAN, getClass().getSimpleName());
 
     _chunkOffsetsBuffer = _indexDataBuffer.view(0, _chunkOffsetHeaderSize);
-    int bitsetEndPos = _chunkOffsetHeaderSize + _bitsetSize;
+    long bitsetEndPos = _chunkOffsetHeaderSize + _bitsetSize;
     _bitsetBuffer = _indexDataBuffer.view(_chunkOffsetHeaderSize, bitsetEndPos);
     _rawDataBuffer = _indexDataBuffer.view(bitsetEndPos, bitsetEndPos + _rawDataSize);
 
@@ -104,7 +104,7 @@ public class FixedBitMVForwardIndexWriter implements Closeable {
     return _chunkOffsetHeaderSize;
   }
 
-  public int getBitsetSize() {
+  public long getBitsetSize() {
     return _bitsetSize;
   }
 
