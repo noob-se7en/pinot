@@ -81,6 +81,7 @@ public class TableConfigBuilder {
   private ReplicaGroupStrategyConfig _replicaGroupStrategyConfig;
   private CompletionConfig _completionConfig;
   private String _crypterClassName;
+  private boolean _thresholdForNumOfColValuesEnabled = false;
 
   // Tenant config related
   private String _brokerTenant;
@@ -439,6 +440,7 @@ public class TableConfigBuilder {
     validationConfig.setReplication(_numReplicas);
     validationConfig.setPeerSegmentDownloadScheme(_peerSegmentDownloadScheme);
     validationConfig.setCrypterClassName(_crypterClassName);
+    validationConfig.setThresholdForNumOfColValuesEnabled(_thresholdForNumOfColValuesEnabled);
 
     // Tenant config
     TenantConfig tenantConfig = new TenantConfig(_brokerTenant, _serverTenant, _tagOverrideConfig);

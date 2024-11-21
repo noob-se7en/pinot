@@ -309,6 +309,7 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
   private String _stopReason = null;
   private final Semaphore _segBuildSemaphore;
   private final boolean _isOffHeap;
+  private final boolean _thresholdForNumOfColValuesEnabled;
   /**
    * Whether null handling is enabled by default. This value is only used if
    * {@link Schema#isEnableColumnBasedNullHandling()} is false.
@@ -361,6 +362,13 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
           _segmentLogger.info("Stopping consumption due to force commit - numRowsConsumed={} numRowsIndexed={}",
               _numRowsConsumed, _numRowsIndexed);
           _stopReason = SegmentCompletionProtocol.REASON_FORCE_COMMIT_MESSAGE_RECEIVED;
+          return true;
+        } else if (_thresholdForNumOfColValuesEnabled && _realtimeSegment.isNumOfColValuesAboveThreshold()) {
+          _segmentLogger.info(
+              "Stopping consumption as num of values for a column is above threshold - numRowsConsumed={} "
+                  + "numRowsIndexed={}",
+              _numRowsConsumed, _numRowsIndexed);
+          _stopReason = SegmentCompletionProtocol.REASON_NUM_OF_COL_VALUES_ABOVE_THRESHOLD;
           return true;
         }
         return false;
@@ -1233,6 +1241,7 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
     final Logger _logger;
     final ServerSegmentCompletionProtocolHandler _protocolHandler;
     final String _reason;
+
     private ConsumptionStopIndicator(StreamPartitionMsgOffset offset, String segmentName, String instanceId,
         ServerSegmentCompletionProtocolHandler protocolHandler, String reason, Logger logger) {
       _offset = offset;
@@ -1529,6 +1538,7 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
 
     _isOffHeap = indexLoadingConfig.isRealtimeOffHeapAllocation();
     _defaultNullHandlingEnabled = indexingConfig.isNullHandlingEnabled();
+    _thresholdForNumOfColValuesEnabled = tableConfig.getValidationConfig().isThresholdForNumOfColValuesEnabled();
 
     // Start new realtime segment
     String consumerDir = realtimeTableDataManager.getConsumerDir();
@@ -1552,7 +1562,8 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
             .setUpsertDropOutOfOrderRecord(tableConfig.isDropOutOfOrderRecord())
             .setPartitionDedupMetadataManager(partitionDedupMetadataManager)
             .setDedupTimeColumn(tableConfig.getDedupTimeColumn())
-            .setFieldConfigList(tableConfig.getFieldConfigList());
+            .setFieldConfigList(tableConfig.getFieldConfigList())
+            .setThresholdForNumOfColValuesEnabled(_thresholdForNumOfColValuesEnabled);
 
     // Create message decoder
     Set<String> fieldsToRead = IngestionUtils.getFieldsForRecordExtractor(_tableConfig.getIngestionConfig(), _schema);
@@ -1625,7 +1636,7 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
           "Failed to initialize segment data manager", e));
       _segmentLogger.warn(
           "Scheduling task to call controller to mark the segment as OFFLINE in Ideal State due"
-           + " to initialization error: '{}'",
+          + " to initialization error: '{}'",
           e.getMessage());
       // Since we are going to throw exception from this thread (helix execution thread), the externalview
       // entry for this segment will be ERROR. We allow time for Helix to make this transition, and then

@@ -147,8 +147,10 @@ public class MutableSegmentImpl implements MutableSegment {
   private final int _mainPartitionId; // partition id designated for this consuming segment
   private final boolean _defaultNullHandlingEnabled;
   private final File _consumerDir;
+  private final boolean _thresholdForNumOfColValuesEnabled;
 
   private final Map<String, IndexContainer> _indexContainerMap = new HashMap<>();
+  private boolean _numOfColValuesLimitBreached = false;
 
   private final IdMap<FixedIntArray> _recordIdMap;
 
@@ -225,6 +227,7 @@ public class MutableSegmentImpl implements MutableSegment {
     _mainPartitionId = config.getPartitionId();
     _defaultNullHandlingEnabled = config.isNullHandlingEnabled();
     _consumerDir = new File(config.getConsumerDir());
+    _thresholdForNumOfColValuesEnabled = config.isThresholdForNumOfColValuesEnabled();
 
     Collection<FieldSpec> allFieldSpecs = _schema.getAllFieldSpecs();
     List<FieldSpec> physicalFieldSpecs = new ArrayList<>(allFieldSpecs.size());
@@ -792,7 +795,17 @@ public class MutableSegmentImpl implements MutableSegment {
         Object[] values = (Object[]) value;
         for (Map.Entry<IndexType, MutableIndex> indexEntry : indexContainer._mutableIndexes.entrySet()) {
           try {
-            indexEntry.getValue().add(values, dictIds, docId);
+            MutableIndex mutableIndex = indexEntry.getValue();
+            if (_thresholdForNumOfColValuesEnabled) {
+              if (mutableIndex.canAdd(values.length)) {
+                mutableIndex.add(values, dictIds, docId);
+              } else {
+                _logger.warn("Cannot add new row for column {} due to num of col value threshold limit", column);
+                _numOfColValuesLimitBreached = true;
+              }
+            } else {
+              mutableIndex.add(values, dictIds, docId);
+            }
           } catch (Exception e) {
             recordIndexingError(indexEntry.getKey(), e);
           }
@@ -1227,6 +1240,10 @@ public class MutableSegmentImpl implements MutableSegment {
 
   private boolean isAggregateMetricsEnabled() {
     return _recordIdMap != null;
+  }
+
+  public boolean isNumOfColValuesAboveThreshold() {
+    return _numOfColValuesLimitBreached;
   }
 
   // NOTE: Okay for single-writer
