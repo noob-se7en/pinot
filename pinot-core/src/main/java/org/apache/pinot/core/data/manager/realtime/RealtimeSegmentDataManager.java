@@ -37,7 +37,6 @@ import javax.annotation.Nullable;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pinot.common.Utils;
-import org.apache.pinot.common.metadata.ZKMetadataProvider;
 import org.apache.pinot.common.metadata.segment.SegmentZKMetadata;
 import org.apache.pinot.common.metrics.ServerGauge;
 import org.apache.pinot.common.metrics.ServerMeter;
@@ -545,7 +544,7 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
   }
 
   /**
-   * @param messageBatch batch of messages to process
+   * @param messageBatch            batch of messages to process
    * @param idlePipeSleepTimeMillis wait time in case no messages were read
    * @return returns <code>true</code> if the process loop ended before processing the batch, <code>false</code>
    * otherwise
@@ -1233,13 +1232,11 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
   }
 
   /**
-   * Cleans up the metrics that reflects the state of the realtime segment.
-   * This step is essential as the instance may not be the target location for some of the partitions.
-   * E.g. if the number of partitions increases, or a host swap is needed, the target location for some partitions
-   * may change,
-   * and the current host remains to run. In this case, the current server would still keep the state of the old
-   * partitions,
-   * which no longer resides in this host any more, thus causes false positive information to the metric system.
+   * Cleans up the metrics that reflects the state of the realtime segment. This step is essential as the instance may
+   * not be the target location for some of the partitions. E.g. if the number of partitions increases, or a host swap
+   * is needed, the target location for some partitions may change, and the current host remains to run. In this case,
+   * the current server would still keep the state of the old partitions, which no longer resides in this host any more,
+   * thus causes false positive information to the metric system.
    */
   private void cleanupMetrics() {
     _serverMetrics.removeTableGauge(_clientId, ServerGauge.LLC_PARTITION_CONSUMING);
@@ -1451,13 +1448,13 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
 
   /**
    * Stop the consuming thread.
-   *
+   * <p>
    * This method is invoked in 2 places:
    * 1. By the Helix thread when handling the segment state transition from CONSUMING to ONLINE. When this method is
-   *    invoked, Helix thread should already hold the segment lock, and the consumer thread is not building the segment.
-   *    We can safely interrupt the consumer thread and wait for it to join.
+   * invoked, Helix thread should already hold the segment lock, and the consumer thread is not building the segment. We
+   * can safely interrupt the consumer thread and wait for it to join.
    * 2. By either the Helix thread or consumer thread to offload the segment. In this case, we can also safely interrupt
-   *    the consumer thread because there is no need to build the segment.
+   * the consumer thread because there is no need to build the segment.
    */
   public void stop()
       throws InterruptedException {
@@ -1824,8 +1821,8 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
   }
 
   /**
-   * Checkpoints existing consumer before creating a new consumer instance
-   * Assumes there is a valid instance of {@link PartitionGroupConsumer}
+   * Checkpoints existing consumer before creating a new consumer instance Assumes there is a valid instance of
+   * {@link PartitionGroupConsumer}
    */
   private void recreateStreamConsumer(String reason) {
     _segmentLogger.info("Recreating stream consumer for topic partition {}, reason: {}", _clientId, reason);
