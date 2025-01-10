@@ -1029,6 +1029,7 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
     // complete.
     if (_allowConsumptionDuringCommit) {
       closeStreamConsumers();
+      _segmentLogger.info("closed stream consumers");
     }
     // Do not allow building segment when table data manager is already shut down
     if (_realtimeTableDataManager.isShutDown()) {
