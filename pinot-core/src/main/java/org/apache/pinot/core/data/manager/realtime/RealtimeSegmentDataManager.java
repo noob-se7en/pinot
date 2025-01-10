@@ -1145,7 +1145,7 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
         metadataFiles.put(V1Constants.MetadataKeys.METADATA_FILE_NAME, metadataFile);
         metadataFiles.put(V1Constants.SEGMENT_CREATION_META, creationMetaFile);
 
-        Thread.sleep(100000);
+        Thread.sleep(1000000000);
 
         return new SegmentBuildDescriptor(segmentTarFile, metadataFiles, _currentOffset, buildTimeMillis,
             waitTimeMillis, segmentSizeBytes);
