@@ -1144,12 +1144,16 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
         metadataFiles.put(V1Constants.MetadataKeys.METADATA_FILE_NAME, metadataFile);
         metadataFiles.put(V1Constants.SEGMENT_CREATION_META, creationMetaFile);
 
+        Thread.sleep(100000);
+
         return new SegmentBuildDescriptor(segmentTarFile, metadataFiles, _currentOffset, buildTimeMillis,
             waitTimeMillis, segmentSizeBytes);
       } else {
         return new SegmentBuildDescriptor(null, null, _currentOffset, buildTimeMillis, waitTimeMillis,
             segmentSizeBytes);
       }
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
     } finally {
       if (_segBuildSemaphore != null) {
         _segmentLogger.info("Releasing semaphore for building segment");
