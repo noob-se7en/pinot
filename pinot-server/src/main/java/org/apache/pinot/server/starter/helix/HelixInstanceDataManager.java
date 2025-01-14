@@ -655,6 +655,7 @@ public class HelixInstanceDataManager implements InstanceDataManager {
   private boolean isBatchSuccessful(List<SegmentDataManager> segmentDataManagers) {
     for (SegmentDataManager segmentDataManager : segmentDataManagers) {
       RealtimeSegmentDataManager realtimeSegmentDataManager = (RealtimeSegmentDataManager) segmentDataManager;
+      realtimeSegmentDataManager.getState().isFinal()
       if (!realtimeSegmentDataManager.getState().equals(RealtimeSegmentDataManager.State.COMMITTED)) {
         return false;
       }
