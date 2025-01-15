@@ -64,17 +64,17 @@ public class FixedBitMVForwardIndexWriter implements Closeable {
   private PinotDataBitSet _customBitSet;
   private FixedBitIntReaderWriter _rawDataWriter;
   private int _numChunks;
-  private int _prevRowStartIndex = 0;
+  private long _prevRowStartIndex = 0;
   private int _prevRowLength = 0;
   private int _chunkOffsetHeaderSize;
-  private int _bitsetSize;
+  private long _bitsetSize;
   private long _rawDataSize;
   private long _totalSize;
   private int _docsPerChunk;
 
   private int _nextDocId = 0;
 
-  public FixedBitMVForwardIndexWriter(File file, int numDocs, int totalNumValues, int numBitsPerValue)
+  public FixedBitMVForwardIndexWriter(File file, int numDocs, long totalNumValues, int numBitsPerValue)
       throws IOException {
     float averageValuesPerDoc = totalNumValues / numDocs;
     _docsPerChunk = (int) (Math.ceil(PREFERRED_NUM_VALUES_PER_CHUNK / averageValuesPerDoc));
@@ -83,15 +83,16 @@ public class FixedBitMVForwardIndexWriter implements Closeable {
     _bitsetSize = (totalNumValues + 7) / 8;
     _rawDataSize = ((long) totalNumValues * numBitsPerValue + 7) / 8;
     _totalSize = _chunkOffsetHeaderSize + _bitsetSize + _rawDataSize;
+    // Todo: confirm what should be the new limit
     Preconditions
-        .checkState(_totalSize > 0 && _totalSize < Integer.MAX_VALUE, "Total size can not exceed 2GB for file: ",
+        .checkState(_totalSize > 0 && _totalSize < (2L * Integer.MAX_VALUE), "Total size can not exceed 4GB for file: ",
             file.toString());
     // Backward-compatible: index file is always big-endian
     _indexDataBuffer =
         PinotDataBuffer.mapFile(file, false, 0, _totalSize, ByteOrder.BIG_ENDIAN, getClass().getSimpleName());
 
     _chunkOffsetsBuffer = _indexDataBuffer.view(0, _chunkOffsetHeaderSize);
-    int bitsetEndPos = _chunkOffsetHeaderSize + _bitsetSize;
+    long bitsetEndPos = _chunkOffsetHeaderSize + _bitsetSize;
     _bitsetBuffer = _indexDataBuffer.view(_chunkOffsetHeaderSize, bitsetEndPos);
     _rawDataBuffer = _indexDataBuffer.view(bitsetEndPos, bitsetEndPos + _rawDataSize);
 
@@ -104,7 +105,7 @@ public class FixedBitMVForwardIndexWriter implements Closeable {
     return _chunkOffsetHeaderSize;
   }
 
-  public int getBitsetSize() {
+  public long getBitsetSize() {
     return _bitsetSize;
   }
 
@@ -140,13 +141,14 @@ public class FixedBitMVForwardIndexWriter implements Closeable {
     _rawDataWriter = null;
   }
 
-  private int updateHeader(int length) {
-    int newStartIndex = _prevRowStartIndex + _prevRowLength;
+  private long updateHeader(int length) {
+    long newStartIndex = _prevRowStartIndex + _prevRowLength;
     int docId = _nextDocId++;
     if (docId % _docsPerChunk == 0) {
       int chunkId = docId / _docsPerChunk;
-      _chunkOffsetsWriter.writeInt(chunkId, newStartIndex);
+      _chunkOffsetsWriter.writeLong(chunkId, newStartIndex);
     }
+    // Todo: customBitSet should handle long offset
     _customBitSet.setBit(newStartIndex);
     _prevRowStartIndex = newStartIndex;
     _prevRowLength = length;
@@ -154,6 +156,7 @@ public class FixedBitMVForwardIndexWriter implements Closeable {
   }
 
   public void putDictIds(int[] dictIds) {
+    // Todo: _rawDataWriter should handle long offset
     _rawDataWriter.writeInt(updateHeader(dictIds.length), dictIds.length, dictIds);
   }
 }

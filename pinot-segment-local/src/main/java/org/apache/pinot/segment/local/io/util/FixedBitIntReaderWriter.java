@@ -27,7 +27,7 @@ public final class FixedBitIntReaderWriter implements Closeable {
   private final PinotDataBitSet _dataBitSet;
   private final int _numBitsPerValue;
 
-  public FixedBitIntReaderWriter(PinotDataBuffer dataBuffer, int numValues, int numBitsPerValue) {
+  public FixedBitIntReaderWriter(PinotDataBuffer dataBuffer, long numValues, int numBitsPerValue) {
     Preconditions
         .checkState(dataBuffer.size() == (int) (((long) numValues * numBitsPerValue + Byte.SIZE - 1) / Byte.SIZE));
     _dataBitSet = new PinotDataBitSet(dataBuffer);
