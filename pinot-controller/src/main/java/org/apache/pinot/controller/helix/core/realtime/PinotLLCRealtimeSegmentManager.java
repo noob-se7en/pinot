@@ -1725,15 +1725,16 @@ public class PinotLLCRealtimeSegmentManager {
    * @param tableNameWithType  table name with type
    * @param partitionGroupIdsToCommit  comma separated list of partition group IDs to commit
    * @param segmentsToCommit  comma separated list of consuming segments to commit
+   * @param batchSize  max number of consuming segments a server can commit at once
    * @return the set of consuming segments for which commit was initiated
    */
   public Set<String> forceCommit(String tableNameWithType, @Nullable String partitionGroupIdsToCommit,
-      @Nullable String segmentsToCommit) {
+      @Nullable String segmentsToCommit, int batchSize) {
     IdealState idealState = getIdealState(tableNameWithType);
     Set<String> allConsumingSegments = findConsumingSegments(idealState);
     Set<String> targetConsumingSegments = filterSegmentsToCommit(allConsumingSegments, partitionGroupIdsToCommit,
         segmentsToCommit);
-    sendForceCommitMessageToServers(tableNameWithType, targetConsumingSegments);
+    sendForceCommitMessageToServers(tableNameWithType, targetConsumingSegments, batchSize);
     return targetConsumingSegments;
   }
 
@@ -1779,7 +1780,7 @@ public class PinotLLCRealtimeSegmentManager {
       @Nullable String comment) {
     IdealState updatedIdealState = updatePauseStateInIdealState(tableNameWithType, true, reasonCode, comment);
     Set<String> consumingSegments = findConsumingSegments(updatedIdealState);
-    sendForceCommitMessageToServers(tableNameWithType, consumingSegments);
+    sendForceCommitMessageToServers(tableNameWithType, consumingSegments, Integer.MAX_VALUE);
     return new PauseStatusDetails(true, consumingSegments, reasonCode, comment != null ? comment
         : "Pause flag is set. Consuming segments are being committed."
             + " Use /pauseStatus endpoint in a few moments to check if all consuming segments have been committed.",
@@ -1824,14 +1825,14 @@ public class PinotLLCRealtimeSegmentManager {
     return updatedIdealState;
   }
 
-  private void sendForceCommitMessageToServers(String tableNameWithType, Set<String> consumingSegments) {
+  private void sendForceCommitMessageToServers(String tableNameWithType, Set<String> consumingSegments, int batchSize) {
     if (!consumingSegments.isEmpty()) {
       Criteria recipientCriteria = new Criteria();
       recipientCriteria.setInstanceName("%");
       recipientCriteria.setRecipientInstanceType(InstanceType.PARTICIPANT);
       recipientCriteria.setResource(tableNameWithType);
       recipientCriteria.setSessionSpecific(true);
-      ForceCommitMessage message = new ForceCommitMessage(tableNameWithType, consumingSegments);
+      ForceCommitMessage message = new ForceCommitMessage(tableNameWithType, consumingSegments, batchSize);
       int numMessagesSent = _helixManager.getMessagingService().send(recipientCriteria, message, null, -1);
       if (numMessagesSent > 0) {
         LOGGER.info("Sent {} force commit messages for table: {} segments: {}", numMessagesSent, tableNameWithType,

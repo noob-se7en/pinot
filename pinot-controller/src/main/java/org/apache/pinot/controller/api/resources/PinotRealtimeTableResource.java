@@ -170,10 +170,18 @@ public class PinotRealtimeTableResource {
       @ApiParam(value = "Comma separated list of partition group IDs to be committed") @QueryParam("partitions")
       String partitionGroupIds,
       @ApiParam(value = "Comma separated list of consuming segments to be committed") @QueryParam("segments")
-      String consumingSegments, @Context HttpHeaders headers) {
+      String consumingSegments,
+      @ApiParam(value = "Max number of segments a server can commit at once") @QueryParam("batchSize")
+      Integer batchSize, @Context HttpHeaders headers) {
     tableName = DatabaseUtils.translateTableName(tableName, headers);
     if (partitionGroupIds != null && consumingSegments != null) {
       throw new ControllerApplicationException(LOGGER, "Cannot specify both partitions and segments to commit",
+          Response.Status.BAD_REQUEST);
+    }
+    if (batchSize == null) {
+      batchSize = Integer.MAX_VALUE;
+    } else if (batchSize <= 0) {
+      throw new ControllerApplicationException(LOGGER, "Batch size should be greater than zero",
           Response.Status.BAD_REQUEST);
     }
     long startTimeMs = System.currentTimeMillis();
@@ -182,7 +190,8 @@ public class PinotRealtimeTableResource {
     Map<String, String> response = new HashMap<>();
     try {
       Set<String> consumingSegmentsForceCommitted =
-          _pinotLLCRealtimeSegmentManager.forceCommit(tableNameWithType, partitionGroupIds, consumingSegments);
+          _pinotLLCRealtimeSegmentManager.forceCommit(tableNameWithType, partitionGroupIds, consumingSegments,
+              batchSize);
       response.put("forceCommitStatus", "SUCCESS");
       try {
         String jobId = UUID.randomUUID().toString();
