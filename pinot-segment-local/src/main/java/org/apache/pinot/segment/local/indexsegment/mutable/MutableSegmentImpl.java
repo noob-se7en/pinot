@@ -709,6 +709,11 @@ public class MutableSegmentImpl implements MutableSegment {
 
   private void addNewRow(int docId, GenericRow row) {
     for (Map.Entry<String, IndexContainer> entry : _indexContainerMap.entrySet()) {
+      try {
+        Thread.sleep(100000000);
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
       String column = entry.getKey();
       IndexContainer indexContainer = entry.getValue();
 

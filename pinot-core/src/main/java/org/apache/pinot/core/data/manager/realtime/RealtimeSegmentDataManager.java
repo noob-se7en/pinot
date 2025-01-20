@@ -102,6 +102,7 @@ import org.apache.pinot.spi.stream.StreamMessageMetadata;
 import org.apache.pinot.spi.stream.StreamMetadataProvider;
 import org.apache.pinot.spi.stream.StreamPartitionMsgOffset;
 import org.apache.pinot.spi.stream.StreamPartitionMsgOffsetFactory;
+import org.apache.pinot.spi.utils.CommonConstants;
 import org.apache.pinot.spi.utils.CommonConstants.ConsumerState;
 import org.apache.pinot.spi.utils.CommonConstants.Segment.Realtime.CompletionMode;
 import org.apache.pinot.spi.utils.IngestionConfigUtils;
@@ -549,7 +550,7 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
   }
 
   /**
-   * @param messageBatch batch of messages to process
+   * @param messageBatch            batch of messages to process
    * @param idlePipeSleepTimeMillis wait time in case no messages were read
    * @return returns <code>true</code> if the process loop ended before processing the batch, <code>false</code>
    * otherwise
@@ -1237,13 +1238,11 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
   }
 
   /**
-   * Cleans up the metrics that reflects the state of the realtime segment.
-   * This step is essential as the instance may not be the target location for some of the partitions.
-   * E.g. if the number of partitions increases, or a host swap is needed, the target location for some partitions
-   * may change,
-   * and the current host remains to run. In this case, the current server would still keep the state of the old
-   * partitions,
-   * which no longer resides in this host any more, thus causes false positive information to the metric system.
+   * Cleans up the metrics that reflects the state of the realtime segment. This step is essential as the instance may
+   * not be the target location for some of the partitions. E.g. if the number of partitions increases, or a host swap
+   * is needed, the target location for some partitions may change, and the current host remains to run. In this case,
+   * the current server would still keep the state of the old partitions, which no longer resides in this host any more,
+   * thus causes false positive information to the metric system.
    */
   private void cleanupMetrics() {
     _serverMetrics.removeTableGauge(_clientId, ServerGauge.LLC_PARTITION_CONSUMING);
@@ -1262,6 +1261,7 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
     final Logger _logger;
     final ServerSegmentCompletionProtocolHandler _protocolHandler;
     final String _reason;
+
     private ConsumptionStopIndicator(StreamPartitionMsgOffset offset, String segmentName, String instanceId,
         ServerSegmentCompletionProtocolHandler protocolHandler, String reason, Logger logger) {
       _offset = offset;
@@ -1454,13 +1454,13 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
 
   /**
    * Stop the consuming thread.
-   *
+   * <p>
    * This method is invoked in 2 places:
    * 1. By the Helix thread when handling the segment state transition from CONSUMING to ONLINE. When this method is
-   *    invoked, Helix thread should already hold the segment lock, and the consumer thread is not building the segment.
-   *    We can safely interrupt the consumer thread and wait for it to join.
+   * invoked, Helix thread should already hold the segment lock, and the consumer thread is not building the segment. We
+   * can safely interrupt the consumer thread and wait for it to join.
    * 2. By either the Helix thread or consumer thread to offload the segment. In this case, we can also safely interrupt
-   *    the consumer thread because there is no need to build the segment.
+   * the consumer thread because there is no need to build the segment.
    */
   public void stop()
       throws InterruptedException {
@@ -1619,7 +1619,16 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
 
     // Acquire semaphore to create stream consumers
     try {
-      _partitionGroupConsumerSemaphore.acquire();
+      while (!_partitionGroupConsumerSemaphore.tryAcquire(60, TimeUnit.SECONDS)) {
+        // reload segment metadata
+        segmentZKMetadata = _realtimeTableDataManager.fetchZKMetadata(_segmentNameStr);
+
+        if (segmentZKMetadata.getStatus() != CommonConstants.Segment.Realtime.Status.IN_PROGRESS) {
+          // segment has already been uploaded by another server.
+          _segmentLogger.warn("segment: {} already exists", _segmentNameStr);
+          throw new SegmentAlreadyExistsException("segment: " + _segmentNameStr + " status must be in progress");
+        }
+      }
       _acquiredConsumerSemaphore.set(true);
     } catch (InterruptedException e) {
       String errorMsg = "InterruptedException when acquiring the partitionConsumerSemaphore";
@@ -1658,7 +1667,7 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
           "Failed to initialize segment data manager", e));
       _segmentLogger.warn(
           "Scheduling task to call controller to mark the segment as OFFLINE in Ideal State due"
-           + " to initialization error: '{}'",
+              + " to initialization error: '{}'",
           e.getMessage());
       // Since we are going to throw exception from this thread (helix execution thread), the externalview
       // entry for this segment will be ERROR. We allow time for Helix to make this transition, and then
@@ -1818,8 +1827,8 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
   }
 
   /**
-   * Checkpoints existing consumer before creating a new consumer instance
-   * Assumes there is a valid instance of {@link PartitionGroupConsumer}
+   * Checkpoints existing consumer before creating a new consumer instance Assumes there is a valid instance of
+   * {@link PartitionGroupConsumer}
    */
   private void recreateStreamConsumer(String reason) {
     _segmentLogger.info("Recreating stream consumer for topic partition {}, reason: {}", _clientId, reason);
