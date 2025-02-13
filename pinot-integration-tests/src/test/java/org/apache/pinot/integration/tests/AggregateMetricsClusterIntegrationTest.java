@@ -89,7 +89,7 @@ public class AggregateMetricsClusterIntegrationTest extends BaseClusterIntegrati
   }
 
   @Test
-  public void testControllerBrokerQueryForward()
+  public void testIngestFromURI()
       throws Exception {
     File testCsvFile = new File(getClass().getClassLoader().getResource("test1.csv").getFile());
     File file = Files.copy(testCsvFile.toPath(), FileUtils.getTempDirectory().toPath().resolve(testCsvFile.getName()))
