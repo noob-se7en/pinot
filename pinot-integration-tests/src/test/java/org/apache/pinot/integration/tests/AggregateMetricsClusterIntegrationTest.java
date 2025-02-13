@@ -20,6 +20,9 @@ package org.apache.pinot.integration.tests;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.io.File;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -64,6 +67,7 @@ public class AggregateMetricsClusterIntegrationTest extends BaseClusterIntegrati
             .addDateTime("DaysSinceEpoch", DataType.INT, "1:DAYS:EPOCH", "1:DAYS").build();
     addSchema(schema);
     TableConfig tableConfig = createRealtimeTableConfig(avroFiles.get(0));
+    TableConfig tableConfigOffline = createOfflineTableConfig();
     IndexingConfig indexingConfig = tableConfig.getIndexingConfig();
     indexingConfig.setSortedColumn(Collections.singletonList("Carrier"));
     indexingConfig.setInvertedIndexColumns(Collections.singletonList("Origin"));
@@ -72,6 +76,7 @@ public class AggregateMetricsClusterIntegrationTest extends BaseClusterIntegrati
     indexingConfig.setBloomFilterColumns(Collections.singletonList("Origin"));
     indexingConfig.setAggregateMetrics(true);
     addTableConfig(tableConfig);
+//    addTableConfig(tableConfigOffline);
 
     // Push data into Kafka
     pushAvroIntoKafka(avroFiles);
@@ -81,6 +86,34 @@ public class AggregateMetricsClusterIntegrationTest extends BaseClusterIntegrati
 
     // Wait for all documents loaded
     waitForAllDocsLoaded(600_000L);
+  }
+
+  @Test
+  public void testControllerBrokerQueryForward()
+      throws Exception {
+    File testCsvFile = new File(getClass().getClassLoader().getResource("test1.csv").getFile());
+    File file = Files.copy(testCsvFile.toPath(), FileUtils.getTempDirectory().toPath().resolve(testCsvFile.getName()))
+        .toFile();
+    try {
+      String batchConfigMapStr = "{"
+          + "\"inputFormat\":\"csv\""
+          + "}";
+      String fileURIStr = file.toURI().toString();
+
+      String encodedBatchConfig = URLEncoder.encode(batchConfigMapStr, StandardCharsets.UTF_8);
+      String encodedSourceURI = URLEncoder.encode(fileURIStr, StandardCharsets.UTF_8);
+
+      String queryParams = "tableNameWithType=" + getTableName()+"_OFFLINE" +
+          "&batchConfigMapStr=" + encodedBatchConfig +
+          "&sourceURIStr=" + encodedSourceURI;
+
+//      addTableConfig();
+
+      String str = sendPostRequest(getControllerBaseApiUrl() + "/ingestFromURI" + "?" + queryParams);
+    } finally {
+      file.delete();
+    }
+//    assert 200 == execute.getCode();
   }
 
   @Override
