@@ -91,28 +91,24 @@ public class AggregateMetricsClusterIntegrationTest extends BaseClusterIntegrati
   @Test
   public void testIngestFromURI()
       throws Exception {
-    File testCsvFile = new File(getClass().getClassLoader().getResource("test1.csv").getFile());
-    File file = Files.copy(testCsvFile.toPath(), FileUtils.getTempDirectory().toPath().resolve(testCsvFile.getName()))
-        .toFile();
-    try {
-      String batchConfigMapStr = "{"
-          + "\"inputFormat\":\"csv\""
-          + "}";
-      String fileURIStr = file.toURI().toString();
+//    File testCsvFile = new File(getClass().getClassLoader().getResource("test1.csv").getFile());
+//    File file = Files.copy(testCsvFile.toPath(), FileUtils.getTempDirectory().toPath().resolve(testCsvFile.getName()))
+//        .toFile();
+    String batchConfigMapStr = "{"
+        + "\"inputFormat\":\"csv\""
+        + "}";
+//      String fileURIStr = file.toURI().toString();
 
-      String encodedBatchConfig = URLEncoder.encode(batchConfigMapStr, StandardCharsets.UTF_8);
-      String encodedSourceURI = URLEncoder.encode(fileURIStr, StandardCharsets.UTF_8);
+    String encodedBatchConfig = URLEncoder.encode(batchConfigMapStr, StandardCharsets.UTF_8);
+    String encodedSourceURI = URLEncoder.encode("file:///var/folders/d5/vqqy7cq14q98r30nsnz3dh4w0000gp/T/preview_temp/658abfbe-076e-4708-91cd-8f685483f14b.csv", StandardCharsets.UTF_8);
 
-      String queryParams = "tableNameWithType=" + getTableName()+"_OFFLINE" +
-          "&batchConfigMapStr=" + encodedBatchConfig +
-          "&sourceURIStr=" + encodedSourceURI;
+    String queryParams = "tableNameWithType=" + getTableName()+"_OFFLINE" +
+        "&batchConfigMapStr=" + encodedBatchConfig +
+        "&sourceURIStr=" + encodedSourceURI;
 
 //      addTableConfig();
 
-      String str = sendPostRequest(getControllerBaseApiUrl() + "/ingestFromURI" + "?" + queryParams);
-    } finally {
-      file.delete();
-    }
+    String str = sendPostRequest(getControllerBaseApiUrl() + "/ingestFromURI" + "?" + queryParams);
 //    assert 200 == execute.getCode();
   }
 
