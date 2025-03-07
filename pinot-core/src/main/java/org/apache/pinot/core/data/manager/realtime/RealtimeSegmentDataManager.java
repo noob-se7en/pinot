@@ -1665,6 +1665,10 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
         }
       }
       _acquiredConsumerSemaphore.set(true);
+      while (notInOrder()) {
+        // Goto sleep until all previous online segments are downloaded.
+        Thread.sleep(10000);
+      }
     } catch (InterruptedException e) {
       String errorMsg = "InterruptedException when acquiring the partitionConsumerSemaphore";
       _segmentLogger.error(errorMsg);
@@ -1724,6 +1728,11 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
       }).start();
       throw t;
     }
+  }
+
+  private boolean notInOrder() {
+    // TODO: if dedup enabled check ZK to see if we have downloaded/stored all previously consuming segments
+    return false;
   }
 
   private void setConsumeEndTime(SegmentZKMetadata segmentZKMetadata, long now) {
