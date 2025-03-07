@@ -103,6 +103,7 @@ import org.apache.pinot.spi.stream.StreamMessageMetadata;
 import org.apache.pinot.spi.stream.StreamMetadataProvider;
 import org.apache.pinot.spi.stream.StreamPartitionMsgOffset;
 import org.apache.pinot.spi.stream.StreamPartitionMsgOffsetFactory;
+import org.apache.pinot.spi.utils.CommonConstants;
 import org.apache.pinot.spi.utils.CommonConstants.ConsumerState;
 import org.apache.pinot.spi.utils.CommonConstants.Segment.Realtime.CompletionMode;
 import org.apache.pinot.spi.utils.IngestionConfigUtils;
@@ -1658,12 +1659,22 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
 
     // Acquire semaphore to create stream consumers
     try {
-      long startTimeMs = System.currentTimeMillis();
       while (!_partitionGroupConsumerSemaphore.tryAcquire(5, TimeUnit.MINUTES)) {
-        _segmentLogger.warn("Failed to acquire partitionGroupConsumerSemaphore in: {} ms. Retrying.",
-            System.currentTimeMillis() - startTimeMs);
+        // reload segment metadata to get latest status
+        segmentZKMetadata = _realtimeTableDataManager.fetchZKMetadata(_segmentNameStr);
+
+        if (segmentZKMetadata.getStatus() == CommonConstants.Segment.Realtime.Status.DONE) {
+          // segment has already been uploaded by another server.
+          _segmentLogger.warn("segment: {} already exists. Skipping creation of RealtimeSegmentDataManager",
+              _segmentNameStr);
+          throw new SegmentAlreadyExistsException("segment: " + _segmentNameStr + " status must be in progress");
+        }
       }
       _acquiredConsumerSemaphore.set(true);
+      while (notInOrder()) {
+        // Goto sleep until all previous online segments are downloaded.
+        Thread.sleep(10000);
+      }
     } catch (InterruptedException e) {
       String errorMsg = "InterruptedException when acquiring the partitionConsumerSemaphore";
       _segmentLogger.error(errorMsg);
@@ -1723,6 +1734,11 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
       }).start();
       throw t;
     }
+  }
+
+  private boolean notInOrder() {
+    // TODO: if dedup enabled check ZK to see if we have downloaded/stored all previously consuming segments
+    return false;
   }
 
   private void setConsumeEndTime(SegmentZKMetadata segmentZKMetadata, long now) {
