@@ -118,7 +118,8 @@ public class StreamAvroIntoKafkaCommand extends AbstractBaseAdminCommand impleme
       DataFileStream<GenericRecord> reader = AvroUtils.getAvroReader(new File(_avroFile));
       DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(reader.getSchema());
       // Iterate over every record
-      for (GenericRecord genericRecord : reader) {
+      GenericRecord genericRecord = reader.iterator().next();
+      while (true) {
         byte[] bytes;
         switch (_outputFormat) {
           case "avro":
@@ -141,15 +142,12 @@ public class StreamAvroIntoKafkaCommand extends AbstractBaseAdminCommand impleme
           Uninterruptibles.sleepUninterruptibly(messageDelayMillis, TimeUnit.MILLISECONDS);
         }
       }
-
-      reader.close();
     } catch (Exception e) {
       e.printStackTrace();
       throw new RuntimeException(e);
     }
-
-    savePID(System.getProperty("java.io.tmpdir") + File.separator + ".streamAvro.pid");
-    return true;
+//    savePID(System.getProperty("java.io.tmpdir") + File.separator + ".streamAvro.pid");
+//    return true;
   }
 
   public StreamAvroIntoKafkaCommand setAvroFile(String avroFile) {

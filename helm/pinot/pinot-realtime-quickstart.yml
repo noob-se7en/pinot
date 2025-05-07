@@ -836,10 +836,10 @@ spec:
       containers:
         - name: loading-json-data-to-kafka
           image: pinot:inject_22
-          args: [ "StreamAvroIntoKafka", "-avroFile", "examples/stream/airlineStats/rawdata/airlineStats_data.avro", "-kafkaTopic", "flights-realtime", "-kafkaBrokerList", "kafka:9092", "-zkAddress", "kafka-zookeeper:2181" ]
+          args: [ "StreamAvroIntoKafka", "-avroFile", "examples/stream/airlineStats/rawdata/airlineStats_data.avro", "-kafkaTopic", "flights-realtime", "-kafkaBrokerList", "kafka:9092", "-zkAddress", "kafka-zookeeper:2181", "_millisBetweenMessages", "100"]
         - name: loading-avro-data-to-kafka
           image: pinot:inject_22
-          args: [ "StreamAvroIntoKafka", "-avroFile", "examples/stream/airlineStats/rawdata/airlineStats_data.avro", "-kafkaTopic", "flights-realtime-avro", "-kafkaBrokerList", "kafka:9092", "-zkAddress", "kafka-zookeeper:2181", "-outputFormat", "avro" ]
+          args: [ "StreamAvroIntoKafka", "-avroFile", "examples/stream/airlineStats/rawdata/airlineStats_data.avro", "-kafkaTopic", "flights-realtime-avro", "-kafkaBrokerList", "kafka:9092", "-zkAddress", "kafka-zookeeper:2181", "-outputFormat", "avro", "_millisBetweenMessages", "100"]
       restartPolicy: OnFailure
   backoffLimit: 3
 
