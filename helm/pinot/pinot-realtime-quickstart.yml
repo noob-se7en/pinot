@@ -801,7 +801,8 @@ spec:
     spec:
       containers:
         - name: pinot-add-example-realtime-table-json
-          image: pinot:inject_22
+          image: inject_24:latest
+          imagePullPolicy: IfNotPresent
           args: [ "AddTable", "-schemaFile", "/var/pinot/examples/airlineStats_schema.json", "-tableConfigFile", "/var/pinot/examples/airlineStats_realtime_table_config.json", "-controllerHost", "pinot-controller", "-controllerPort", "9000", "-exec" ]
           env:
             - name: JAVA_OPTS
@@ -810,7 +811,8 @@ spec:
             - name: examples
               mountPath: /var/pinot/examples
         - name: pinot-add-example-realtime-table-avro
-          image: pinot:inject_22
+          image: inject_24:latest
+          imagePullPolicy: IfNotPresent
           args: [ "AddTable", "-schemaFile", "/var/pinot/examples/airlineStatsAvro_schema.json", "-tableConfigFile", "/var/pinot/examples/airlineStatsAvro_realtime_table_config.json", "-controllerHost", "pinot-controller", "-controllerPort", "9000", "-exec" ]
           env:
             - name: JAVA_OPTS
@@ -835,12 +837,34 @@ spec:
     spec:
       containers:
         - name: loading-json-data-to-kafka
-          image: pinot:inject_22
-          args: [ "StreamAvroIntoKafka", "-avroFile", "examples/stream/airlineStats/rawdata/airlineStats_data.avro", "-kafkaTopic", "flights-realtime", "-kafkaBrokerList", "kafka:9092", "-zkAddress", "kafka-zookeeper:2181", "_millisBetweenMessages", "100"]
+          image: inject_24:latest
+          imagePullPolicy: IfNotPresent
+          args: [ "StreamAvroIntoKafka", "-avroFile", "examples/stream/airlineStats/rawdata/airlineStats_data.avro", "-kafkaTopic", "flights-realtime", "-kafkaBrokerList", "kafka:9092", "-zkAddress", "kafka-zookeeper:2181", "-millisBetweenMessages", "100"]
         - name: loading-avro-data-to-kafka
-          image: pinot:inject_22
-          args: [ "StreamAvroIntoKafka", "-avroFile", "examples/stream/airlineStats/rawdata/airlineStats_data.avro", "-kafkaTopic", "flights-realtime-avro", "-kafkaBrokerList", "kafka:9092", "-zkAddress", "kafka-zookeeper:2181", "-outputFormat", "avro", "_millisBetweenMessages", "100"]
+          image: inject_24:latest
+          imagePullPolicy: IfNotPresent
+          args: [ "StreamAvroIntoKafka", "-avroFile", "examples/stream/airlineStats/rawdata/airlineStats_data.avro", "-kafkaTopic", "flights-realtime-avro", "-kafkaBrokerList", "kafka:9092", "-zkAddress", "kafka-zookeeper:2181", "-outputFormat", "avro", "-millisBetweenMessages", "100"]
       restartPolicy: OnFailure
   backoffLimit: 3
+---
+#apiVersion: batch/v1
+#kind: Job
+#metadata:
+#  name: pinot-realtime-quickstart-load-data-into-kafka-10
+#  namespace: pinot-quickstart
+#spec:
+#  template:
+#    spec:
+#      containers:
+#        - name: loading-json-data-to-kafka
+#          image: inject_24:latest
+#          imagePullPolicy: IfNotPresent
+#          args: [ "StreamAvroIntoKafka", "-avroFile", "examples/stream/airlineStats/rawdata/airlineStats_data.avro", "-kafkaTopic", "flights-realtime", "-kafkaBrokerList", "kafka:9092", "-zkAddress", "kafka-zookeeper:2181", "-millisBetweenMessages", "10"]
+#        - name: loading-avro-data-to-kafka
+#          image: inject_24:latest
+#          imagePullPolicy: IfNotPresent
+#          args: [ "StreamAvroIntoKafka", "-avroFile", "examples/stream/airlineStats/rawdata/airlineStats_data.avro", "-kafkaTopic", "flights-realtime-avro", "-kafkaBrokerList", "kafka:9092", "-zkAddress", "kafka-zookeeper:2181", "-outputFormat", "avro", "-millisBetweenMessages", "10"]
+#      restartPolicy: OnFailure
+#  backoffLimit: 3
 
 
