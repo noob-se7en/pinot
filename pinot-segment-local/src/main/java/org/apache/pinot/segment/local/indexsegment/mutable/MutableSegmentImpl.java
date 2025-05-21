@@ -713,21 +713,40 @@ public class MutableSegmentImpl implements MutableSegment {
     }
   }
 
-  private boolean makeConsumptionSlow() {
+  public boolean makeConsumptionSlow() {
+
+    if (_tableConfig.getIngestionConfig() == null) {
+      return false;
+    }
+
+    if (_tableConfig.getIngestionConfig().getStreamIngestionConfig() == null) {
+      return false;
+    }
+
+    if (_tableConfig.getIngestionConfig().getStreamIngestionConfig().getStreamConfigMaps() == null) {
+      return false;
+    }
 
     String servers =
         _tableConfig.getIngestionConfig().getStreamIngestionConfig().getStreamConfigMaps().get(0).get("server_names");
 
-    if (servers == null) {
+    if ((servers == null) || (servers.isEmpty())) {
       return false;
     }
 
     String[] serverArr = servers.split(":");
-    _logger.info("serverArr: {}, instanceId: {}", serverArr, _instanceId);
+//    _logger.info("serverArr: {}, instanceId: {}", serverArr, _instanceId);
+
+    if (serverArr.length == 0) {
+      return false;
+    }
 
     boolean shouldInject = false;
 
     for (String server : serverArr) {
+      if (server == null || server.isEmpty()) {
+        continue;
+      }
       if (_instanceId.contains(server)) {
         shouldInject = true;
         break;
@@ -755,7 +774,7 @@ public class MutableSegmentImpl implements MutableSegment {
   private void addNewRow(int docId, GenericRow row) {
     for (Map.Entry<String, IndexContainer> entry : _indexContainerMap.entrySet()) {
       if (makeConsumptionSlow()) {
-        _logger.info("making slow");
+//        _logger.info("making slow");
         try {
           Thread.sleep(5000);
         } catch (InterruptedException ignored) {

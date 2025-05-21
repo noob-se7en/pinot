@@ -997,21 +997,41 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
 
   private void injectFailureDuringBuild() {
 
-    _segmentLogger.info("latest");
+//    _segmentLogger.info("latest");
+
+    if (_tableConfig.getIngestionConfig() == null) {
+      return;
+    }
+
+    if (_tableConfig.getIngestionConfig().getStreamIngestionConfig() == null) {
+      return;
+    }
+
+    if (_tableConfig.getIngestionConfig().getStreamIngestionConfig().getStreamConfigMaps() == null) {
+      return;
+    }
 
     String servers =
         _tableConfig.getIngestionConfig().getStreamIngestionConfig().getStreamConfigMaps().get(0).get("server_names");
 
-    if (servers == null) {
+    if ((servers == null) || (servers.isEmpty())) {
       return;
     }
 
     String[] serverArr = servers.split(":");
-    _segmentLogger.info("serverArr: {}, instanceId: {}", serverArr, _instanceId);
+
+    if (serverArr.length == 0) {
+      return;
+    }
+
+//    _segmentLogger.info("serverArr: {}, instanceId: {}", serverArr, _instanceId);
 
     boolean shouldInject = false;
 
     for (String server : serverArr) {
+      if (server == null || server.isEmpty()) {
+        continue;
+      }
       if (_instanceId.contains(server)) {
         shouldInject = true;
         break;
@@ -1739,7 +1759,9 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
         .setDefaultNullHandlingEnabled(_defaultNullHandlingEnabled)
         .setPartitionUpsertMetadataManager(partitionUpsertMetadataManager)
         .setPartitionDedupMetadataManager(partitionDedupMetadataManager)
-        .setConsumerDir(consumerDir);
+        .setConsumerDir(consumerDir)
+        .setTableConfig(tableConfig)
+        .setInstanceId(_instanceId);
 
     // Create message decoder
     Set<String> fieldsToRead = IngestionUtils.getFieldsForRecordExtractor(_tableConfig, _schema);

@@ -66,6 +66,12 @@ public class KafkaPartitionLevelConsumer extends KafkaPartitionLevelConnectionHa
     }
 
     ConsumerRecords<String, Bytes> consumerRecords = _consumer.poll(Duration.ofMillis(timeoutMs));
+
+//    partiton.max.fetch.byte
+
+    // partiton.max.fetch.byte = 5MB
+    //
+
     List<ConsumerRecord<String, Bytes>> records = consumerRecords.records(_topicPartition);
     List<BytesStreamMessage> filteredRecords = new ArrayList<>(records.size());
     long firstOffset = -1;

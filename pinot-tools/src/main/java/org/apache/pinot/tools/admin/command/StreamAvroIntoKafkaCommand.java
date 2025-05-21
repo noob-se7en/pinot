@@ -119,15 +119,15 @@ public class StreamAvroIntoKafkaCommand extends AbstractBaseAdminCommand impleme
       DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(reader.getSchema());
       // Iterate over every record
       GenericRecord genericRecord = reader.iterator().next();
+      ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+      BinaryEncoder encoder = EncoderFactory.get().binaryEncoder(outputStream, null);
+      datumWriter.write(genericRecord, encoder);
+      encoder.flush();
+      byte[] bytes = outputStream.toByteArray();
+
       while (true) {
-        byte[] bytes;
         switch (_outputFormat) {
           case "avro":
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            BinaryEncoder encoder = EncoderFactory.get().binaryEncoder(outputStream, null);
-            datumWriter.write(genericRecord, encoder);
-            encoder.flush();
-            bytes = outputStream.toByteArray();
             break;
           default:
             String recordJson = genericRecord.toString();
