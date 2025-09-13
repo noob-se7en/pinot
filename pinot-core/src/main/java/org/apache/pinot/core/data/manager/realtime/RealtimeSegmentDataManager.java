@@ -66,6 +66,7 @@ import org.apache.pinot.segment.local.segment.index.loader.IndexLoadingConfig;
 import org.apache.pinot.segment.local.upsert.PartitionUpsertMetadataManager;
 import org.apache.pinot.segment.local.upsert.UpsertContext;
 import org.apache.pinot.segment.local.utils.IngestionUtils;
+import org.apache.pinot.segment.local.utils.SegmentPreloadUtils;
 import org.apache.pinot.segment.spi.MutableSegment;
 import org.apache.pinot.segment.spi.V1Constants;
 import org.apache.pinot.segment.spi.creator.SegmentVersion;
@@ -790,6 +791,12 @@ public class RealtimeSegmentDataManager extends SegmentDataManager {
         if (_partitionDedupMetadataManager != null
             && _partitionDedupMetadataManager.getContext().getMetadataTTL() > 0) {
           _partitionDedupMetadataManager.removeExpiredPrimaryKeys();
+        }
+
+        if (_realtimeTableDataManager.isDedupEnabled()) {
+          while(!SegmentPreloadUtils.loadedPrevSegment(_segmentNameStr, _realtimeTableDataManager)) {
+            Thread.sleep(10_000);
+          }
         }
 
         while (!_state.isFinal()) {
