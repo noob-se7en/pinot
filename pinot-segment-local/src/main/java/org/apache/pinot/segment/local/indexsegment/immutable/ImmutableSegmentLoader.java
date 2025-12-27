@@ -122,7 +122,6 @@ public class ImmutableSegmentLoader {
       throws Exception {
     Preconditions.checkArgument(indexDir.isDirectory(), "Index directory: %s does not exist or is not a directory",
         indexDir);
-
     SegmentMetadataImpl segmentMetadata = new SegmentMetadataImpl(indexDir);
     if (segmentMetadata.getTotalDocs() == 0) {
       return new EmptyIndexSegment(segmentMetadata);
